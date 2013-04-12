@@ -1,3 +1,68 @@
 #!/bin/bash
 
-echo "word"
+set -e
+
+source .mgback
+
+[ $backups_toplevel_dir ]
+[ $backups_server ]
+
+if [ ! $backups_sub_dir ]
+then
+  if [ $PWD = "/" ]
+  then
+    backups_sub_dir=root
+    source_path=$PWD
+  else
+    backups_sub_dir=`echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"`
+    source_path=$PWD/
+  fi
+fi
+
+for exclude in ${excludes[@]}
+do
+  excludes_expansion="$excludes_expansion --exclude '$exclude'"
+done
+
+local_hostname=`hostname -s`
+
+[ $local_hostname ]
+backup_destination=`echo $backups_toplevel_dir/$local_hostname/$backups_sub_dir | sed "s|//|/|g"`
+
+if ! ssh $backups_server "[ -d $backup_destination ]"
+then
+  mkdest_dir_command="ssh $backups_server mkdir -p $backup_destination"
+  echo $mkdest_dir_command
+  echo
+  $mkdest_dir_command
+fi
+
+rsync_command="rsync -axHv -e ssh --delete --numeric-ids --delete-excluded \
+                 $excludes_expansion \
+		 --link-dest=$backup_destination/current \
+		 $source_path $backups_server:$backup_destination/working"
+echo $rsync_command
+echo
+$rsync_command
+
+stamp=`date '+%Y%m%d_%H%M%S'`
+
+mv_working_command="ssh $backups_server mv $backup_destination/working $backup_destination/$stamp"
+echo $mv_working_command
+echo
+$mv_working_command
+
+if ssh $backups_server "[ -d $backup_destination/current ]" 
+then
+  rm_current_command="ssh $backups_server rm $backup_destination/current"
+  echo $rm_current_command
+  echo
+  $rm_current_command
+fi
+
+ln_current_command="ssh $backups_server ln -s $backup_destination/$stamp $backup_destination/current"
+echo $ln_current_command
+echo
+$ln_current_command
+
+# wtf...
