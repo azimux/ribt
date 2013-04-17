@@ -1,68 +1,157 @@
 #!/bin/bash
 
+# REQUIRED OPTIONS that should be in .mgback
+# backups_server i     which should be the hostname of the machine the backups are stored on
+# backups_toplevel_dir which should be the location all backups are stored, such as
+#                      /var/backups/
+
+# OPTIONAL OPTIONS
+# backups_sub_dir      directory under $backups_toplevel_dir to store the backups
+#                      defaults to root for / and foo_bar_baz for /foo/bar/baz
+# local_hostname       defaults to output of hostname -s
 set -e
 
-source .mgback
-
-[ $backups_toplevel_dir ]
-[ $backups_server ]
-
-if [ ! $backups_sub_dir ]
-then
-  if [ $PWD = "/" ]
+function do_init {
+  if [ -f .mgback ]
   then
-    backups_sub_dir=root
-    source_path=$PWD
+    echo ".mgback already exists... remove it first if you really want to."
+    exit 1
   else
-    backups_sub_dir=`echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"`
-    source_path=$PWD/
+    echo '
+# The host of machine where the backups are stored
+backups_server=
+# The directory on the backups server where the backups are stored
+# such as /var/backups/
+backups_toplevel_dir=
+' > .mgback
+    echo '
+/tmp/*
+' > .mgback_excludes
+
+    echo "Created .mgback and .mgback_excludes files.  Now edit them."
   fi
-fi
+}
 
-for exclude in ${excludes[@]}
-do
-  excludes_expansion="$excludes_expansion --exclude '$exclude'"
-done
+function load_variables {
+  source .mgback
 
-local_hostname=`hostname -s`
+  if [ ! $backups_server ]
+  then
+    echo "You must set \$backups_server in .mgback"
+    exit 1
+  fi
+  if [ ! $backups_toplevel_dir ]
+  then
+    echo "You must set \$backups_toplevel_dir in .mgback"
+    exit 1
+  fi
 
-[ $local_hostname ]
-backup_destination=`echo $backups_toplevel_dir/$local_hostname/$backups_sub_dir | sed "s|//|/|g"`
+  if [ ! $backups_sub_dir ]
+  then
+    if [ $PWD = "/" ]
+    then
+      backups_sub_dir=root
+      source_path=$PWD
+    else
+      backups_sub_dir=`echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"`
+      source_path=$PWD/
+    fi
+  fi
 
-if ! ssh $backups_server "[ -d $backup_destination ]"
-then
-  mkdest_dir_command="ssh $backups_server mkdir -p $backup_destination"
-  echo $mkdest_dir_command
+  local_hostname=`hostname -s`
+  if [ ! $local_hostname ]
+  then
+    echo "wtf, couldn't determine local_hostname.  This shouldn't happen!"
+    exit 1
+  fi
+
+  backup_destination=`echo $backups_toplevel_dir/$local_hostname/$backups_sub_dir | sed "s|//|/|g"`
+
+  if [ ! $backup_destination ]
+  then
+    echo "wtf, couldn't determine backup_destination.  This shouldn't happen!"
+    exit 1
+  fi
+
+}
+
+function do_backup {
+  load_variables
+
+  if ! ssh $backups_server "[ -d $backup_destination ]"
+  then
+    mkdest_dir_command="ssh $backups_server mkdir -p $backup_destination"
+    echo $mkdest_dir_command
+    echo
+    $mkdest_dir_command
+  fi
+
+  rsync_command="rsync -axHv -e ssh --numeric-ids --delete-excluded \
+                    --exclude-from .mgback_excludes \
+                    --link-dest=$backup_destination/current \
+                    $source_path $backups_server:$backup_destination/working"
+  echo $rsync_command
   echo
-  $mkdest_dir_command
-fi
+  $rsync_command
 
-rsync_command="rsync -axHv -e ssh --delete --numeric-ids --delete-excluded \
-                 $excludes_expansion \
-		 --link-dest=$backup_destination/current \
-		 $source_path $backups_server:$backup_destination/working"
-echo $rsync_command
-echo
-$rsync_command
+  stamp=`date '+%Y%m%d_%H%M%S'`
 
-stamp=`date '+%Y%m%d_%H%M%S'`
-
-mv_working_command="ssh $backups_server mv $backup_destination/working $backup_destination/$stamp"
-echo $mv_working_command
-echo
-$mv_working_command
-
-if ssh $backups_server "[ -d $backup_destination/current ]" 
-then
-  rm_current_command="ssh $backups_server rm $backup_destination/current"
-  echo $rm_current_command
+  mv_working_command="ssh $backups_server mv $backup_destination/working $backup_destination/$stamp"
+  echo $mv_working_command
   echo
-  $rm_current_command
-fi
+  $mv_working_command
 
-ln_current_command="ssh $backups_server ln -s $backup_destination/$stamp $backup_destination/current"
-echo $ln_current_command
-echo
-$ln_current_command
+  if ssh $backups_server "[ -d $backup_destination/current ]"
+  then
+    rm_current_command="ssh $backups_server rm $backup_destination/current"
+    echo $rm_current_command
+    echo
+    $rm_current_command
+  fi
 
-# wtf...
+  ln_current_command="ssh $backups_server ln -s $backup_destination/$stamp $backup_destination/current"
+  echo $ln_current_command
+  echo
+  $ln_current_command
+}
+
+function do_tag {
+echo tag is $1
+  load_variables
+
+  cp_command="ssh $backups_server cp -d $backup_destination/current $backup_destination/$1"
+  echo $cp_command
+  echo
+  $cp_command
+}
+
+
+case $1 in
+  init)
+    do_init
+    ;;
+  backup)
+    do_backup
+    ;;
+  tag)
+    if [ ! $2 ]
+    then
+      echo "You must give a tag name"
+      exit 1
+    fi
+
+    if [ $3 ]
+    then
+      echo "Too many arguments.  Not sure what to do with $3"
+      exit 1
+    fi
+
+    do_tag $2
+    ;;
+  *)
+    echo usage: $0 '[init|backup|restore|tag]'
+    exit 1
+    ;;
+esac
+
+echo Succesfully completed $1
