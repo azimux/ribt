@@ -12,6 +12,16 @@
 set -e
 
 function do_init {
+  if [ -f .mgback_excludes ]
+  then
+    echo ".mgback_excludes already exists... remove it first if you really want to."
+    exit 1
+  else
+    echo '
+/tmp/*
+' > .mgback_excludes
+  fi
+
   if [ -f .mgback ]
   then
     echo ".mgback already exists... remove it first if you really want to."
@@ -24,12 +34,10 @@ backups_server=
 # such as /var/backups/
 backups_toplevel_dir=
 ' > .mgback
-    echo '
-/tmp/*
-' > .mgback_excludes
 
-    echo "Created .mgback and .mgback_excludes files.  Now edit them."
   fi
+
+  echo "Created .mgback and .mgback_excludes files.  Now edit them."
 }
 
 function load_variables {
@@ -116,7 +124,6 @@ function do_backup {
 }
 
 function do_tag {
-echo tag is $1
   load_variables
 
   cp_command="ssh $backups_server cp -d $backup_destination/current $backup_destination/$1"
@@ -149,7 +156,7 @@ case $1 in
     do_tag $2
     ;;
   *)
-    echo usage: $0 '[init|backup|restore|tag]'
+    echo usage: $0 '[init|backup|tag]'
     exit 1
     ;;
 esac
