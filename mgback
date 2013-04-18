@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # REQUIRED OPTIONS that should be in .mgback
 # backups_server i     which should be the hostname of the machine the backups are stored on
@@ -41,7 +41,7 @@ backups_toplevel_dir=
 }
 
 function load_variables {
-  source .mgback
+  source $PWD/.mgback
 
   if [ ! $backups_server ]
   then
