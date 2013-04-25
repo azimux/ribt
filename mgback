@@ -41,7 +41,7 @@ backups_toplevel_dir=
 }
 
 load_variables() {
-  source $PWD/.mgback
+  . $PWD/.mgback
 
   if [ ! $backups_server ]
   then
