@@ -11,7 +11,7 @@
 # local_hostname       defaults to output of hostname -s
 set -e
 
-function do_init {
+do_init() {
   if [ -f .mgback_excludes ]
   then
     echo ".mgback_excludes already exists... remove it first if you really want to."
@@ -40,7 +40,7 @@ backups_toplevel_dir=
   echo "Created .mgback and .mgback_excludes files.  Now edit them."
 }
 
-function load_variables {
+load_variables() {
   source $PWD/.mgback
 
   if [ ! $backups_server ]
@@ -83,7 +83,7 @@ function load_variables {
 
 }
 
-function do_backup {
+do_backup() {
   load_variables
 
   if ! ssh $backups_server "[ -d $backup_destination ]"
@@ -123,7 +123,7 @@ function do_backup {
   $ln_current_command
 }
 
-function do_tag {
+do_tag() {
   load_variables
 
   cp_command="ssh $backups_server cp -d $backup_destination/current $backup_destination/$1"
