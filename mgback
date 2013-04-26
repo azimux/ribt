@@ -132,6 +132,17 @@ do_tag() {
   $cp_command
 }
 
+do_restore() {
+  load_variables
+
+  rsync_command="rsync -axHv -e ssh --numeric-ids --delete \
+                    --exclude-from .mgback_excludes \
+                    $backups_server:$backup_destination/$1/ $source_path"
+
+  echo $rsync_command
+  echo
+  $rsync_command
+}
 
 case $1 in
   init)
@@ -139,6 +150,13 @@ case $1 in
     ;;
   backup)
     do_backup
+    ;;
+  restore)
+    to_restore=$2
+    if [ ! $to_restore ]; then
+      to_restore=current
+    fi
+    do_restore $to_restore
     ;;
   tag)
     if [ ! $2 ]
