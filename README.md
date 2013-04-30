@@ -10,7 +10,8 @@ ribt
  (````)
 ```
 
-ribt is a very basic backup utility written in Bourne shell.
+ribt is a very basic backup utility written in Bourne shell.  It is pronounced
+like the onomatopoeia of the sound a frog makes.
 
 It depends on a semi-recent version of rsync to do all the heavy lifting.
 It aims to have minimal dependencies and has been tested in bash dash and ash.
@@ -72,8 +73,8 @@ significance, if any, of the backup.  The tag command is for giving a more
 meaningful name to the backup.
 
 Running ```rbit tag 'about_to_upgrade_udev'``` will create a symbolic link
-pointing at whatever ```current``` currently points at with the name
-```upgrading_udev```
+pointing at whatever ```current``` currently points at with the
+name ```upgrading_udev```
 
 ### restore
 
