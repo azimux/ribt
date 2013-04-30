@@ -33,6 +33,9 @@ backups_server=
 # The directory on the backups server where the backups are stored
 # such as /var/backups/
 backups_toplevel_dir=
+
+# local_hostname=
+# backups_sub_dir=
 ' > .ribt
 
   fi
@@ -56,15 +59,19 @@ load_variables() {
 
   if [ ! $backups_sub_dir ]
   then
-    if [ $PWD = "/" ]
-    then
+    if [ $PWD = "/" ]; then
       backups_sub_dir=root
-      source_path=$PWD
     else
       backups_sub_dir=`echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"`
-      source_path=$PWD/
     fi
   fi
+
+  if [ $PWD = "/" ]; then
+    source_path=$PWD
+  else
+    source_path=$PWD/
+  fi
+
 
   if [ ! $local_hostname ]; then
     local_hostname=`hostname -s`
