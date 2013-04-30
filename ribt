@@ -66,11 +66,12 @@ load_variables() {
     fi
   fi
 
-  local_hostname=`hostname -s`
-  if [ ! $local_hostname ]
-  then
-    echo "wtf, couldn't determine local_hostname.  This shouldn't happen!"
-    exit 1
+  if [ ! $local_hostname ]; then
+    local_hostname=`hostname -s`
+    if [ ! $local_hostname ]; then
+      echo "wtf, couldn't determine local_hostname.  This shouldn't happen!"
+      exit 1
+    fi
   fi
 
   backup_destination=`echo $backups_toplevel_dir/$local_hostname/$backups_sub_dir | sed "s|//|/|g"`
