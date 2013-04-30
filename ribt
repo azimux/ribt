@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# REQUIRED OPTIONS that should be in .mgback
+# REQUIRED OPTIONS that should be in .ribt
 # backups_server i     which should be the hostname of the machine the backups are stored on
 # backups_toplevel_dir which should be the location all backups are stored, such as
 #                      /var/backups/
@@ -12,19 +12,19 @@
 set -e
 
 do_init() {
-  if [ -f .mgback_excludes ]
+  if [ -f .ribt_excludes ]
   then
-    echo ".mgback_excludes already exists... remove it first if you really want to."
+    echo ".ribt_excludes already exists... remove it first if you really want to."
     exit 1
   else
     echo '
 /tmp/*
-' > .mgback_excludes
+' > .ribt_excludes
   fi
 
-  if [ -f .mgback ]
+  if [ -f .ribt ]
   then
-    echo ".mgback already exists... remove it first if you really want to."
+    echo ".ribt already exists... remove it first if you really want to."
     exit 1
   else
     echo '
@@ -33,24 +33,24 @@ backups_server=
 # The directory on the backups server where the backups are stored
 # such as /var/backups/
 backups_toplevel_dir=
-' > .mgback
+' > .ribt
 
   fi
 
-  echo "Created .mgback and .mgback_excludes files.  Now edit them."
+  echo "Created .ribt and .ribt_excludes files.  Now edit them."
 }
 
 load_variables() {
-  . $PWD/.mgback
+  . $PWD/.ribt
 
   if [ ! $backups_server ]
   then
-    echo "You must set \$backups_server in .mgback"
+    echo "You must set \$backups_server in .ribt"
     exit 1
   fi
   if [ ! $backups_toplevel_dir ]
   then
-    echo "You must set \$backups_toplevel_dir in .mgback"
+    echo "You must set \$backups_toplevel_dir in .ribt"
     exit 1
   fi
 
@@ -95,7 +95,7 @@ do_backup() {
   fi
 
   rsync_command="rsync -axHv -e ssh --numeric-ids --delete-excluded \
-                    --exclude-from .mgback_excludes \
+                    --exclude-from .ribt_excludes \
                     --link-dest=$backup_destination/current \
                     $source_path $backups_server:$backup_destination/working"
   echo $rsync_command
@@ -136,7 +136,7 @@ do_restore() {
   load_variables
 
   rsync_command="rsync -axHv -e ssh --numeric-ids --delete \
-                    --exclude-from .mgback_excludes \
+                    --exclude-from .ribt_excludes \
                     $backups_server:$backup_destination/$1/ $source_path"
 
   echo $rsync_command
@@ -174,7 +174,7 @@ case $1 in
     do_tag $2
     ;;
   *)
-    echo usage: $0 '[init|backup|tag]'
+    echo usage: $0 '[restore|backup|init|tag]'
     exit 1
     ;;
 esac
