@@ -27,20 +27,28 @@ do_init() {
     echo ".ribt already exists... remove it first if you really want to."
     exit 1
   else
-    echo '
+    echo "
 # The host of machine where the backups are stored
 backups_server=
 # The directory on the backups server where the backups are stored
 # such as /var/backups/
 backups_toplevel_dir=
 
-# local_hostname=
-# backups_sub_dir=
-' > .ribt
+# local_hostname=$(default_hostname)
+# backups_sub_dir=$(default_backups_sub_dir)
+" > .ribt
 
   fi
 
   echo "Created .ribt and .ribt_excludes files.  Now edit them."
+}
+
+default_backups_sub_dir() {
+  echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"
+}
+
+default_hostname() {
+  hostname -s
 }
 
 load_variables() {
@@ -62,8 +70,13 @@ load_variables() {
     if [ $PWD = "/" ]; then
       backups_sub_dir=root
     else
-      backups_sub_dir=`echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"`
+      backups_sub_dir=$(default_backups_sub_dir)
     fi
+  fi
+
+  if [ ! $backups_sub_dir ]; then
+    echo something when wrong with '$backups_sub_dir'
+    exit 1
   fi
 
   if [ $PWD = "/" ]; then
@@ -74,7 +87,7 @@ load_variables() {
 
 
   if [ ! $local_hostname ]; then
-    local_hostname=`hostname -s`
+    local_hostname=$(default_hostname)
     if [ ! $local_hostname ]; then
       echo "wtf, couldn't determine local_hostname.  This shouldn't happen!"
       exit 1
