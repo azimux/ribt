@@ -44,7 +44,11 @@ backups_toplevel_dir=
 }
 
 default_backups_sub_dir() {
-  echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"
+  if [ $PWD = "/" ]; then
+    echo root
+  else
+    echo $PWD | sed "s/[^a-z0-9_\.]/_/g" | sed "s/^_*//g"
+  fi
 }
 
 default_hostname() {
@@ -67,11 +71,7 @@ load_variables() {
 
   if [ ! $backups_sub_dir ]
   then
-    if [ $PWD = "/" ]; then
-      backups_sub_dir=root
-    else
-      backups_sub_dir=$(default_backups_sub_dir)
-    fi
+    backups_sub_dir=$(default_backups_sub_dir)
   fi
 
   if [ ! $backups_sub_dir ]; then
